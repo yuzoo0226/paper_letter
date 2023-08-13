@@ -145,7 +145,7 @@ def get_summary(result: arxiv.Result) -> str:
         'messages': [
             {
                 'role': "user",
-                'content': "この論文を要約してください",
+                'content': "本論文を要約してください",
             }
         ]
     }
@@ -160,26 +160,39 @@ def get_summary(result: arxiv.Result) -> str:
         print(e)
         summary = "要約に失敗しました．"
 
-    # 落合フォーマットで要約
-    data = {
-        'sourceId': response.json()['sourceId'],
-        'messages': [
-            {
-                'role': "user",
-                'content': "以下のフォーマットにしたがって論文を要約してください． 1.この論文の概要はなんですか？ 2.この研究は先行研究と比べてどこがすごいですか？ 3.提案手法の最も重要なポイントはどこですか？ 4.この研究の有効性をどのように検証していますか？ 5.残された課題やその他議論点はありますか？ 6.この論文と最も密接に関わっている論文をタイトルとともに記してください．",
-            }
-        ]
-    }
+    time.sleep(2)
 
-    # 要約されたメッセージを取得
-    chat_request = requests.post('https://api.chatpdf.com/v1/chats/message', headers=headers, json=data)
-    try:
-        # str型で，json形式の出力が返ってくるため，扱いやすいように整形
-        summary_json = json.loads(chat_request.text)
-        summary_o = summary_json["content"]
-    except Exception as e:
-        print(e)
-        summary_o = "要約に失敗しました．"
+    # 落合フォーマットで要約
+    summary_o = ""
+    question_list = [
+        "論文を3行で要約してください．",
+        "関連研究と比べてどこがすごいですか？",
+        "提案手法の最も重要なポイントは何ですか？",
+        "提案手法の有効性をどのように検証しましたか？",
+        "本論文に残された課題はなんですか？",
+        # "参考文献のうち，本論文とのつながりが特に深い論文のタイトルをいくつか教えてください"
+    ]
+
+    for id, question in enumerate(question_list):
+        data = {
+            'sourceId': response.json()['sourceId'],
+            'messages': [
+                {
+                    'role': "user",
+                    'content': question,
+                }
+            ]
+        }
+
+        # 要約されたメッセージを取得
+        chat_request = requests.post('https://api.chatpdf.com/v1/chats/message', headers=headers, json=data)
+        try:
+            # str型で，json形式の出力が返ってくるため，扱いやすいように整形
+            summary_json = json.loads(chat_request.text)
+            summary_o += str(id + 1) + ". " + question + ": \n" + summary_json["content"] + "\n\n"
+        except Exception as e:
+            print(e)
+            summary_o += question + ": " + "この回答生成に失敗しました．"
 
     # チャットの終了処理
     data = {
@@ -227,7 +240,6 @@ def job(keyword: str, paper_hash: Set[str], is_debug: bool = False) -> Set[str]:
         if result.title in paper_hash:
             continue
         # カテゴリーに含まれない論文は除く
-        print(result.categories)
         if len((set(result.categories) & CATEGORIES)) == 0:
             continue
 
@@ -284,14 +296,15 @@ def main():
     Cloud Functionsで実行するメイン関数
     """
     keyword_list = [
-        "LLM",
-        "Robotics",
-        "Autonomous driving"
+        # "LLM",
+        # "Robotics",
+        # "Autonomous driving",
+        "FPGA",
     ]
 
     paper_hash = set()
     for keyword in keyword_list:
-        paper_hash = job(keyword, paper_hash, is_debug=True)
+        paper_hash = job(keyword, paper_hash, is_debug=False)
 
 
 if __name__ == "__main__":
