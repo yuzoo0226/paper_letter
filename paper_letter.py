@@ -296,9 +296,9 @@ def main():
     Cloud Functionsで実行するメイン関数
     """
     keyword_list = [
-        # "LLM",
-        # "Robotics",
-        # "Autonomous driving",
+        "LLM",
+        "Robotics",
+        "Autonomous driving",
         "FPGA",
     ]
 
